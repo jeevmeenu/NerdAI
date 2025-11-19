@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>NerdAI – Smart Study Assistant</title>
+<style>
+  :root{
+    --bg:#f7f9fb; --card:#ffffff; --muted:#6b7280; --green:#25D366;
+    --bubble-user:#dcf8c6; --bubble-bot:#ffffff;
+  }
+  html,body{height:100%; margin:0; background:var(--bg); font-family: -apple-system, system-ui, "Segoe UI", Roboto, Arial; color:#0f1724;}
+  .app{max-width:980px; margin:18px auto; box-shadow:0 10px 40px rgba(12,18,30,0.06); border-radius:12px; overflow:hidden;}
+  header{display:flex;align-items:center;gap:12px;padding:14px 18px;background:linear-gradient(180deg,#ffffff,#f1f6f9);border-bottom:1px solid rgba(15,23,36,0.06);}
+  .dp{width:40px;height:40px;border-radius:50%;overflow:hidden;flex:0 0 40px;box-shadow:0 2px 6px rgba(2,6,23,0.06);}
+  .dp img{width:100%;height:100%;object-fit:cover;display:block;}
+  .title{font-weight:700;font-size:17px;}
+  .subtitle{font-size:12px;color:var(--muted);margin-top:2px;}
+  .main{display:flex;gap:18px;padding:18px;background:var(--bg);}
+  .left{flex:1;display:flex;flex-direction:column;max-width:680px;}
+  .chat{background:var(--card);border-radius:12px;padding:14px;min-height:54vh;max-height:72vh;overflow:auto;border:1px solid rgba(2,6,23,0.04);}
+  .meta{font-size:12px;color:var(--muted);margin:6px 0;}
+  .msg{display:flex;gap:8px;align-items:flex-end;margin:8px 0;max-width:85%;}
+  .msg.user{margin-left:auto;flex-direction:row-reverse;}
+  .bubble{padding:10px 12px;border-radius:18px;box-shadow:0 1px 0 rgba(2,6,23,0.02);font-size:15px;line-height:1.45;white-space:pre-wrap;}
+  .bubble.bot{background:var(--bubble-bot);border:1px solid rgba(2,6,23,0.03);}
+  .bubble.user{background:var(--bubble-user);border:1px solid rgba(2,6,23,0.03);}
+  .input-row{display:flex;gap:8px;margin-top:12px;}
+  input[type="text"]{flex:1;padding:12px;border-radius:999px;border:1px solid rgba(2,6,23,0.06);background:#fff;font-size:16px;outline:none;}
+  button{background:var(--green);color:#fff;padding:10px 14px;border-radius:999px;border:none;font-weight:700;cursor:pointer;}
+  .side{width:300px;}
+  .panel{background:var(--card);padding:12px;border-radius:10px;border:1px solid rgba(2,6,23,0.04);}
+  .pill{display:inline-block;padding:8px 10px;border-radius:999px;background:#f3f7f6;border:1px solid rgba(2,6,23,0.03);cursor:pointer;margin:6px;font-size:13px;}
+  .small{font-size:13px;color:var(--muted);}
+  .history{margin-top:10px;}
+  .kbd{background:#111;padding:6px 8px;border-radius:6px;color:#fff;font-size:12px;}
+  footer{padding:12px;text-align:center;color:var(--muted);font-size:13px;}
+  @media (max-width:840px){.main{flex-direction:column}.side{width:100%}}
+</style>
+</head>
+<body>
+<div class="app" role="main">
+  <header>
+    <div class="dp"><img alt="NerdAI" src="nerdai_dp.jpg" onerror="this.style.display='none'"/></div>
+    <div>
+      <div class="title">NerdAI – Smart Study Assistant 📚</div>
+      <div class="subtitle">WhatsApp-style • Offline Mini-AI • Detailed NCERT-style answers</div>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="left">
+      <div class="chat" id="chat" aria-live="polite">
+        <div class="meta">Try quick examples: <span class="kbd">Explain photosynthesis</span> <span class="kbd">Solve 3x+5=20</span> <span class="kbd">20% of 250</span></div>
+        <div class="msg bot"><div class="bubble bot"><strong>NerdAI:</strong> Hello — I answer NCERT-style Science and Maths questions in detail. Type any question and I will explain step-by-step.</div></div>
+      </div>
+
+      <div class="input-row" style="margin-top:12px;">
+        <input id="q" type="text" placeholder="Type your question — e.g. 'Explain photosynthesis' or '12 * 8'"/>
+        <button id="askBtn" title="Ask NerdAI">Ask</button>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;margin-top:10px;">
+        <button id="voiceBtn" title="Voice input">🎤</button>
+        <div class="small">Answer style: <strong>Long / detailed</strong></div>
+        <div style="flex:1"></div>
+        <button id="clearBtn" style="background:#e5e7eb;color:#111;">Reset</button>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="panel">
+        <div class="small"><strong>Shortcuts</strong></div>
+        <div style="margin-top:8px;">
+          <div class="pill" data-q="Explain photosynthesis">Photosynthesis</div>
+          <div class="pill" data-q="What is a base? Explain with examples">Bases</div>
+          <div class="pill" data-q="Explain physical and chemical changes">Physical vs Chemical change</div>
+          <div class="pill" data-q="Explain electric circuits simply">Electric circuits</div>
+          <div class="pill" data-q="Solve 3x+5=20 and show steps">Solve equation</div>
+        </div>
+
+        <div class="small" style="margin-top:12px;"><strong>Last questions</strong></div>
+        <div id="history" class="history"></div>
+
+        <div style="margin-top:12px;" class="small"><strong>Diagrams</strong></div>
+        <div style="margin-top:6px;">
+          <div class="pill" data-q="Draw a simple circuit">Circuit diagram</div>
+          <div class="pill" data-q="Show plant cell diagram">Plant cell</div>
+          <div class="pill" data-q="Show atom structure simple">Atom diagram</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Made for school exhibition • Offline demo • Remembers last 3 questions</footer>
+</div>
+
+<script>
+/* NerdAI offline — detailed answers (NCERT-style)
+   - Safe calculator (digits + operators + % + 'of')
+   - Step-by-step math solving for arithmetic and linear eq
+   - Detailed topic explanations for many NCERT topics
+   - Simple ASCII diagrams
+   - Memory of last 3 questions (localStorage)
+   - Voice input if supported
+*/
+
+const chat = document.getElementById('chat');
+const qIn = document.getElementById('q');
+const askBtn = document.getElementById('askBtn');
+const clearBtn = document.getElementById('clearBtn');
+const historyBox = document.getElementById('history');
+const voiceBtn = document.getElementById('voiceBtn');
+
+let memory = JSON.parse(localStorage.getItem('nerdai_history') || "[]");
+function renderHistory(){
+  historyBox.innerHTML = '';
+  memory.slice().reverse().forEach(q=>{
+    const d = document.createElement('div');
+    d.className = 'small';
+    d.style.margin = '6px 0';
+    d.textContent = q;
+    historyBox.appendChild(d);
+  });
+}
+renderHistory();
+
+function addMessage(text, who='bot'){
+  const m = document.createElement('div');
+  m.className = 'msg ' + (who==='user' ? 'user' : 'bot');
+  const b = document.createElement('div');
+  b.className = 'bubble ' + (who==='user' ? 'user' : 'bot');
+  b.innerHTML = (who==='user' ? '<strong>You:</strong> ' : '<strong>NerdAI:</strong> ') + text;
+  m.appendChild(b);
+  chat.appendChild(m);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function saveMemory(q){
+  if(!q) return;
+  memory = memory.filter(x=>x!==q);
+  memory.push(q);
+  if(memory.length>3) memory.shift();
+  localStorage.setItem('nerdai_history', JSON.stringify(memory));
+  renderHistory();
+}
+
+/* ---------- SAFE CALCULATOR ---------- */
+/* supports: + - * / ( ) decimals, percentage expressions like "20% of 50" or "20% of 250" */
+function safeCalcExpression(s){
+  s = s.trim();
+  // handle "x% of y" patterns
+  const ofMatch = s.match(/^([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:of\s*)?([0-9]+(?:\.[0-9]+)?)$/i);
+  if(ofMatch){
+    const p = parseFloat(ofMatch[1]), val = parseFloat(ofMatch[2]);
+    return {value: (p/100)*val, steps: `${p}% of ${val} = (${p}/100) × ${val} = ${(p/100)*val}`};
+  }
+  // allow only digits, operators, spaces, parentheses and dot
+  if(!/^[0-9+\-*/(). %]+$/.test(s)) return null;
+  try{
+    // sanitize repeated percent signs/spaces
+    // evaluate using Function safely for arithmetic only
+    let val = Function('"use strict"; return (' + s + ')')();
+    if(typeof val === 'number' && isFinite(val)) return {value: val, steps: `Evaluated: ${s} = ${val}`};
+  }catch(e){}
+  return null;
+}
+
+/* ---------- SIMPLE LINEAR SOLVER ax + b = c  ---------- */
+function solveLinearEquation(text){
+  // normalize common patterns like "3x+5=20" or "3x + 5 = 20"
+  const t = text.replace(/\s+/g,'');
+  const m = t.match(/^([+-]?\d*)x([+-]\d+)=([+-]?\d+)$/i);
+  if(m){
+    let aStr = m[1];
+    let a = (aStr === '' || aStr === '+')? 1 : (aStr === '-')? -1 : parseInt(aStr);
+    let b = parseInt(m[2]);
+    let c = parseInt(m[3]);
+    const step1 = `${a}x ${b>=0?'+ '+b: '- '+Math.abs(b)} = ${c}`;
+    const step2 = `${a}x = ${c - b}`;
+    const x = (c - b)/a;
+    const step3 = `x = (${c} ${b>=0?'- '+b:'+'+Math.abs(b)}) / ${a} = ${x}`;
+    return `Steps:\n1) Write: ${step1}\n2) Move ${b>=0?b:'('+b+')'}: ${step2}\n3) Divide by ${a}: ${step3}\nAnswer: x = ${x}`;
+  }
+  return null;
+}
+
+/* ---------- DIAGRAMS ---------- */
+function getDiagram(q){
+  if(q.includes('circuit')) {
+    return "Simple circuit (draw on paper):\n\n + ──[Battery]+ ──(wire)── [Bulb]──(wire)── -\n\nExplanation: Battery creates potential difference. When circuit is closed, current flows and bulb glows.";
+  }
+  if(q.includes('plant cell')) {
+    return "Plant cell (simple diagram):\n\n[Cell wall]\n[Cell membrane]\n[Cytoplasm]  [Nucleus]\n[Chloroplasts]  [Vacuole]\n\nChloroplasts contain chlorophyll and perform photosynthesis.";
+  }
+  if(q.includes('atom')) {
+    return "Atom (simple):\n\n  Electrons (−) orbit around nucleus\n  Nucleus contains protons (+) and neutrons (0)";
+  }
+  return null;
+}
+
+/* ---------- KNOWLEDGE BASE: detailed NCERT-style answers ---------- */
+/* This is a broad selection of important topics with long, teacher-style explanations.
+   You can ask these topics by name, or ask general questions and the fallback will try to produce a helpful structured answer.
+*/
+function knowledgeBaseDetailed(q){
+  // BIOLOGY
+  if(q.includes('photosynthesis')) return "Photosynthesis — detailed explanation:\nPlants have tiny structures called chloroplasts which contain a green pigment called chlorophyll. Chlorophyll captures light energy from the sun. Using this light energy, plants convert carbon dioxide (from air) and water (from soil) into glucose (a sugar) and oxygen. The overall chemical equation is: 6CO₂ + 6H₂O + light → C₆H₁₂O₆ + 6O₂. Photosynthesis happens mainly in the leaves and provides energy for plant growth. It also produces oxygen which animals need to breathe.";
+  if(q.includes('cell') && q.includes('structure')) return "Cell structure — detailed:\nA cell is the smallest unit of life. Most cells have a cell membrane that controls what enters and leaves; cytoplasm which holds organelles; a nucleus that stores genetic material (DNA) and controls cell activities. Plant cells also have a rigid cell wall for support, chloroplasts for photosynthesis, and a large central vacuole for storage.";
+  if(q.includes('digestion')) return "Digestion — detailed:\nDigestion is the process where large food particles are broken down into smaller molecules that the body can absorb. It begins in the mouth (chewing + saliva), continues in the stomach (acid and enzymes break proteins), and finishes in the small intestine where nutrients are absorbed into the bloodstream. The large intestine absorbs water and forms faeces.";
+  if(q.includes('respiration')) return "Respiration — detailed:\nRespiration is the process by which cells release energy from glucose. Aerobic respiration uses oxygen and produces more energy: Glucose + Oxygen → Carbon dioxide + Water + Energy. This energy is used for growth, movement and other activities.";
+
+  // CHEMISTRY
+  if(q.includes('acid') && q.includes('example')) return "Acids — detailed:\nAcids are substances that release H⁺ ions in water. They taste sour (like lemon), react with certain metals to produce hydrogen gas, and turn blue litmus paper red. Examples: hydrochloric acid (in stomach), citric acid (in lemon), acetic acid (vinegar). The strength of an acid depends on how completely it ionises in water.";
+  if(q.includes('base') || q.includes('alkali')) return "Bases (alkalis) — detailed:\nBases are substances that release OH⁻ ions in water. They taste bitter and feel soapy. Bases turn red litmus paper blue. Common examples include sodium hydroxide (NaOH), lime (calcium hydroxide), and baking soda (sodium bicarbonate). Many cleaning agents are basic because they dissolve grease and react with oils.";
+  if(q.includes('neutral') && q.includes('substance')) return "Neutral substances — detailed:\nNeutral substances have pH = 7 and are neither acidic nor basic. Pure water is a common example. When an acid and a base are mixed in correct amounts, they neutralise each other to form salt and water.";
+
+  // PHYSICS
+  if(q.includes('electricity') || q.includes('current')) return "Electricity and current — detailed:\nElectric current is the flow of electric charge (usually electrons in a wire). A battery or cell creates a potential difference (voltage) that pushes charges around a closed circuit. Important terms: current (I) measured in amperes (A), voltage (V) measured in volts (V), resistance (R) measured in ohms (Ω). Ohm's law: V = I × R. A simple circuit has a power source (battery), connecting wires, and a device (bulb).";
+  if(q.includes('circuit') && q.includes('simple')) return "Simple electric circuit — detailed:\nA simple circuit has a power source (battery), a conductor (wires), and a load (like a bulb or resistor). When the circuit is closed (switch ON), current flows and the bulb lights. If the circuit is open (switch OFF or wire broken), current stops and the bulb goes off. Series circuits have components in one path; parallel circuits have multiple paths.";
+
+  if(q.includes('force') && q.includes('motion')) return "Force and motion — detailed:\nA force is a push or pull that can change an object's speed or direction. Motion is the change in position of an object over time. Newton's first law: an object remains at rest or moves with constant speed unless acted on by an unbalanced force. Forces are measured in newtons (N).";
+
+  // NCERT MATHS topics
+  if(q.includes('fraction') || q.includes('fractions')) return "Fractions — detailed:\nA fraction a/b represents a parts of a whole divided into b equal parts. To add fractions with same denominator: add numerators, keep denominator. To add with different denominators: make denominators same (LCM), then add. To multiply fractions: multiply numerators and denominators. To divide fractions: multiply by reciprocal. Convert improper fractions to mixed numbers by dividing numerator by denominator.";
+  if(q.includes('percentage') || q.includes('%')) return "Percentages — detailed:\nA percentage is a fraction with denominator 100. To find p% of a number N: (p/100) × N. To convert a fraction to percentage: (fraction) × 100%. Percent increase/decrease: use change/original × 100%. Example: 20% of 250 = 0.20 × 250 = 50.";
+  if(q.includes('ratio') || q.includes('proportion')) return "Ratio and proportion — detailed:\nA ratio a:b compares two quantities. Proportion says two ratios are equal, e.g., a:b = c:d. To solve proportion problems, use cross-multiplication: a × d = b × c.";
+  if(q.includes('area') && q.includes('perimeter')) return "Area & Perimeter — detailed:\nPerimeter is the distance around a 2D shape. Area is the space inside. Examples: rectangle width w and length l → Area = l × w, Perimeter = 2(l + w). Square side s → Area = s², Perimeter = 4s. Triangle base b and height h → Area = (1/2) × b × h.";
+  if(q.includes('bodmas') || q.includes('order of operations')) return "BODMAS / Order of operations — detailed:\nBODMAS stands for Brackets, Orders (powers and roots), Division and Multiplication (left to right), Addition and Subtraction (left to right). Always follow this order when evaluating expressions.";
+
+  // HISTORY / SST short detailed
+  if(q.includes('mughal') || q.includes('akbar')) return "Akbar & the Mughal Empire — detailed:\nAkbar (1542–1605) was a powerful Mughal emperor who expanded the empire, introduced administrative reforms, and promoted cultural and religious tolerance. He encouraged arts, built monuments, and established a system of governance that balanced central authority with local administration.";
+
+  return null;
+}
+
+/* ---------- Fallback generator: long structured answer ---------- */
+function fallbackLongAnswer(q){
+  // split into words to make a topic for the heading
+  const words = q.split(/[ ,?]+/).filter(Boolean);
+  const topic = words.slice(0,6).join(' ');
+  return `Detailed explanation for "${topic}":\n\n1) Definition: Explain the concept in clear, simple words.\n2) How it works / properties: Give key points and mechanisms.\n3) Example: Provide a clear example with numbers or diagram idea.\n4) Importance: Why it matters in daily life or in exams.\n\nAsk a follow-up like: "Give 3 examples" or "Solve a sample problem."`;
+}
+
+/* ---------- Main answer function ---------- */
+function answerGenerator(rawQ){
+  if(!rawQ) return "Please type a question.";
+  let q = rawQ.toLowerCase().trim();
+
+  // 1) Check for direct math calculations or percentage
+  const calc = safeCalcExpression(q);
+  if(calc){
+    if(calc.steps) return calc.steps + "\nAnswer: " + calc.value;
+    return "Answer: " + calc.value;
+  }
+
+  // 2) Check for simple linear equation like 3x+5=20
+  const linear = solveLinearEquation(q);
+  if(linear) return linear;
+
+  // 3) diagrams
+  const diag = getDiagram(q);
+  if(diag) return diag;
+
+  // 4) knowledge base
+  const known = knowledgeBaseDetailed(q);
+  if(known) return known;
+
+  // 5) If user asked "solve" with arithmetic present (like "solve 5 + 3 * 2")
+  if(/[0-9]/.test(q) && /solve|calculate|what is|evaluate/.test(q)){
+    const c2 = safeCalcExpression(q.replace(/[^0-9+\-*/(). %]/g,'')); // strip words
+    if(c2) return c2.steps + "\nAnswer: " + c2.value;
+  }
+
+  // 6) fallback long answer
+  return fallbackLongAnswer(q);
+}
+
+/* ---------- Ask handler ---------- */
+function askNerd(q){
+  if(!q) return;
+  addMessage(q, 'user');
+  saveMemory(q);
+  setTimeout(()=>{
+    const ans = answerGenerator(q);
+    addMessage(ans, 'bot');
+  }, 350);
+}
+
+/* ---------- Events & UI ---------- */
+askBtn.addEventListener('click', ()=>{
+  const q = qIn.value.trim();
+  if(!q) return;
+  askNerd(q);
+  qIn.value = '';
+});
+qIn.addEventListener('keydown', e=> { if(e.key === 'Enter') { askBtn.click(); e.preventDefault(); }});
+document.querySelectorAll('.pill').forEach(p=>{
+  p.addEventListener('click', ()=> {
+    const q = p.getAttribute('data-q');
+    qIn.value = q;
+    askBtn.click();
+  });
+});
+clearBtn.addEventListener('click', ()=> {
+  chat.innerHTML = '<div class="meta">Try quick examples: <span class="kbd">Explain photosynthesis</span> <span class="kbd">Solve 3x+5=20</span></div><div class="msg bot"><div class="bubble bot"><strong>NerdAI:</strong> Hello — I answer NCERT-style Science and Maths questions in detail. Type any question and I will explain step-by-step.</div></div>';
+  localStorage.removeItem('nerdai_history');
+  memory = [];
+  renderHistory();
+});
+
+/* ---------- Voice input (optional) ---------- */
+let recognition;
+if('webkitSpeechRecognition' in window || 'SpeechRecognition' in window){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'en-IN';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  voiceBtn.addEventListener('click', ()=> {
+    recognition.start();
+    voiceBtn.textContent = '🎙️ ...';
+  });
+  recognition.onresult = (e)=>{
+    const spoken = e.results[0][0].transcript;
+    qIn.value = spoken;
+    askBtn.click();
+    voiceBtn.textContent = '🎤';
+  };
+  recognition.onerror = ()=> { voiceBtn.textContent = '🎤'; alert('Voice input error or not supported on this device.'); };
+} else {
+  voiceBtn.addEventListener('click', ()=> { alert('Voice input not supported in this browser on your device.'); });
+}
+
+/* ---------- load memory ---------- */
+window.addEventListener('load', ()=> { renderHistory(); });
+
+</script>
+</body>
+</html>
